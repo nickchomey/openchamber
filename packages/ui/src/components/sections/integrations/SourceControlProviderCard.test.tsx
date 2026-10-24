@@ -19,6 +19,9 @@ import { normalizeInstanceInput } from '@/components/sections/openchamber/source
 
 const unexpected = (): never => { throw new Error('Unexpected runtime API access'); };
 
+/** A stored user missing the username the contract requires. */
+type UserWithoutUsername = { provider: string; instance: string; id: string; username?: string };
+
 describe('normalizeInstanceInput', () => {
   const origin = acmeDescriptor();
   const host = githubLikeDescriptor();
@@ -89,6 +92,9 @@ describe('SourceControlProviderCard', () => {
   let withCliLogin = true;
   // Where the listed login came from: the CLI, or a stored token.
   let accountSource: 'cli' | 'pat' = 'cli';
+  // Simulates a server that answered without a username: the card must fall
+  // back instead of crashing.
+  let omitUsername = false;
   let cliDisabled = false;
   // The instance the server lists before anything is added (GitLab's default).
   let listedDefault: SourceControlIdentity[] = [];
@@ -98,6 +104,10 @@ describe('SourceControlProviderCard', () => {
   const statusFor = (identity: SourceControlIdentity): SourceControlAuthStatus => {
     const current = savedInstances.has(identity.instance);
     const user = { ...identity, id: 'user-one', username: 'cli-user' };
+    if (omitUsername) {
+      // SAFETY: simulates a server that answered without a username; the card must fall back instead of crashing.
+      delete (user as UserWithoutUsername).username;
+    }
     if (cliDisabled) {
       return { ...identity, status: 'disconnected', connected: false, accounts: [], cli: { available: true, disabled: true, active: false } };
     }
@@ -196,6 +206,7 @@ describe('SourceControlProviderCard', () => {
     available = { device: true, pat: true, cli: true };
     withCliLogin = true;
     accountSource = 'cli';
+    omitUsername = false;
     cliDisabled = false;
     listedDefault = [{ provider: 'gitlab', instance: 'https://gitlab.com' }];
     useSourceControlAuthStore.getState().resetForRuntimeSwitch();
@@ -507,6 +518,16 @@ describe('SourceControlProviderCard', () => {
       useSourceControlAuthStore.getState().resetForRuntimeSwitch();
       await mount({ ...gitlab, auth: { ...gitlab.auth, methods: ['device', 'pat'], cliName: undefined } });
       expect(buttonLabels()).not.toContain('Enable glab');
+    });
+
+    test('falls back to Connected when a connected account arrives without a username', async () => {
+      omitUsername = true;
+      await mount(gitlab);
+      await addInstance('https://gitlab.example.com', firstInstance);
+      await click('Use glab CLI');
+
+      expect(container.textContent).not.toContain('cli-user');
+      expect(container.textContent).toContain('Connected');
     });
   });
 });

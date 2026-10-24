@@ -95,7 +95,7 @@ export const SourceControlProviderCard: React.FC<{ descriptor: SourceControlProv
     : connected
       ? validAccounts.length > 1
         ? t('settings.sourceControl.accounts.connectedCount', { count: validAccounts.length })
-        : connectedAccount.user.username.trim() || t(copy.connected)
+        : connectedAccount.user?.username?.trim() || t(copy.connected)
       : t(copy.notConnected);
 
   const applyInstance = () => {

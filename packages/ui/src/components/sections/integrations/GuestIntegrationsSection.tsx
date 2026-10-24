@@ -90,8 +90,8 @@ export const GuestIntegrationCard: React.FC<GuestIntegrationCardProps> = ({ gues
 
   const auth = integration.auth;
   const needsUsername = auth === 'token' && integration.token?.scheme === 'basic';
-  const connected = Boolean(status?.connection.connected);
-  const account = status?.connection.account.trim() || '';
+  const connected = Boolean(status?.connection?.connected);
+  const account = status?.connection?.account?.trim() ?? '';
   const statusLabel = isWaiting
     ? t('settings.integrations.guests.status.waiting')
     : connected
