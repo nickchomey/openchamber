@@ -379,12 +379,13 @@ const buildCookie = ({
   value,
   maxAge,
   secure,
+  sameSite = 'Strict',
 }) => {
   const attributes = [
     `${name}=${value}`,
     'Path=/',
     'HttpOnly',
-    'SameSite=Strict',
+    `SameSite=${sameSite}`,
   ];
 
   if (typeof maxAge === 'number') {
@@ -403,6 +404,10 @@ const buildCookie = ({
 
   return attributes.join('; ');
 };
+
+const sessionCookieSameSite = (req, secure) => (
+  secure && String(req?.headers?.origin ?? '').trim() === 'https://localhost' ? 'None' : 'Strict'
+);
 
 const normalizePassword = (candidate) => {
   if (typeof candidate !== 'string') {
@@ -548,6 +553,7 @@ export const createUiAuth = ({
         value: encodeURIComponent(token),
         maxAge: maxAgeSeconds,
         secure,
+        sameSite: sessionCookieSameSite(req, secure),
       });
       res.setHeader('Set-Cookie', header);
     };
@@ -717,6 +723,7 @@ export const createUiAuth = ({
       value: encodeURIComponent(token),
       maxAge: maxAgeSeconds,
       secure,
+      sameSite: sessionCookieSameSite(req, secure),
     });
     res.setHeader('Set-Cookie', header);
   };

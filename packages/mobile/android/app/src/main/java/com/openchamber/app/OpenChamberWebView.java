@@ -4,6 +4,7 @@ import android.content.Context;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.webkit.CookieManager;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.AttributeSet;
@@ -53,6 +54,10 @@ public class OpenChamberWebView extends CapacitorWebView {
         super(context, attrs);
         // The bridge looks this WebView up by an id defined in Capacitor's own layout.
         setId(com.getcapacitor.android.R.id.webview);
+        // Capacitor runs at https://localhost while a saved instance usually has a
+        // different host. Android blocks those cross-site session cookies by default,
+        // even when the server marks them SameSite=None; Secure.
+        CookieManager.getInstance().setAcceptThirdPartyCookies(this, true);
     }
 
     /** Returns the previous value, so the caller can tell whether the IME saw this state. */

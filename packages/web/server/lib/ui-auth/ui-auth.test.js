@@ -104,6 +104,62 @@ describe('ui auth client credential seam', () => {
     expect(sessionCalled).toBe(true);
   });
 
+  it('allows the Android Capacitor origin to send its session cookie to the remote runtime', async () => {
+    const createUiAuth = await loadCreateUiAuth();
+    const auth = createUiAuth({ password: 'secret' });
+    const response = createResponse();
+
+    await auth.handleSessionCreate({
+      method: 'POST',
+      secure: true,
+      headers: { origin: 'https://localhost' },
+      body: { password: 'secret' },
+    }, response);
+
+    expect(response.getHeader('set-cookie')).toContain('SameSite=None');
+    expect(response.getHeader('set-cookie')).toContain('Secure');
+  });
+
+  it('keeps the Android cookie strict when a different page supplies a forwarded host', async () => {
+    const createUiAuth = await loadCreateUiAuth();
+    const auth = createUiAuth({ password: 'secret' });
+    const response = createResponse();
+
+    await auth.handleSessionCreate({
+      method: 'POST',
+      secure: true,
+      headers: { origin: 'https://localhost.attacker.example' },
+      body: { password: 'secret' },
+    }, response);
+
+    expect(response.getHeader('set-cookie')).toContain('SameSite=Strict');
+    expect(response.getHeader('set-cookie')).not.toContain('SameSite=None');
+  });
+
+  it('keeps strict session cookies for browser origins and insecure Android requests', async () => {
+    const createUiAuth = await loadCreateUiAuth();
+    const auth = createUiAuth({ password: 'secret' });
+    const browserResponse = createResponse();
+    const insecureAndroidResponse = createResponse();
+
+    await auth.handleSessionCreate({
+      method: 'POST',
+      secure: true,
+      headers: { origin: 'https://app.example.com' },
+      body: { password: 'secret' },
+    }, browserResponse);
+    await auth.handleSessionCreate({
+      method: 'POST',
+      secure: false,
+      headers: { origin: 'https://localhost' },
+      body: { password: 'secret' },
+    }, insecureAndroidResponse);
+
+    expect(browserResponse.getHeader('set-cookie')).toContain('SameSite=Strict');
+    expect(insecureAndroidResponse.getHeader('set-cookie')).toContain('SameSite=Strict');
+    expect(insecureAndroidResponse.getHeader('set-cookie')).not.toContain('SameSite=None');
+  });
+
   it('can require bearer client credentials when UI password is disabled', async () => {
     const createUiAuth = await loadCreateUiAuth();
     const auth = createUiAuth({
